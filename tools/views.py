@@ -7,10 +7,13 @@ from core.models import Officer
 from core.utils import filter_validity
 from django.core.exceptions import PermissionDenied
 from django.db.models.query_utils import Q
+from django.http import HttpResponse
 from django.http.response import FileResponse, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
+from tablib import Dataset
+
 from location.models import HealthFacility, Location
 from medical.models import Diagnosis, Item, Service
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
@@ -18,6 +21,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from . import serializers, services, utils
 from .apps import ToolsConfig
+from .resources import ItemResource
 
 logger = logging.getLogger(__name__)
 
@@ -592,3 +596,110 @@ def _process_upload(request, process_method):
             return JsonResponse({"error": str(exc)}, status=500)
 
     return JsonResponse({"success": len(errors) == 0, "errors": errors})
+
+
+# Each of the following functions should also have decorators for making sure the user is logged in.
+
+# The 4 export_items_xxx could be all merged into a single function, which receives
+# a parameter to determine in which format the items should be exported
+@api_view(["GET"])
+def export_items_csv(request):
+    return export_items(request.user.id_for_audit, CSV)
+
+
+@api_view(["GET"])
+def export_items_json(request):
+    return export_items(request.user.id_for_audit, JSON)
+
+
+@api_view(["GET"])
+def export_items_xls(request):
+    return export_items(request.user.id_for_audit, XLS)
+
+
+@api_view(["GET"])
+def export_items_xlsx(request):
+    return export_items(request.user.id_for_audit, XLSX)
+
+
+# List of supported import files so far
+XLS = "xls"
+XLSX = "xlsx"
+CSV = "csv"
+JSON = "json"
+
+# FE : delete column "validity to" as we display only null ones (most recent versions)
+# other types: https://stackoverflow.com/a/50860387
+CONTENT_TYPES = {
+    XLS: "application/vnd.ms-excel",
+    CSV: "text/csv",
+    JSON: "application/json",
+    XLSX: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+
+
+def export_items(user_id, data_type):
+    item_resource = ItemResource(user_id)
+    query_set = Item.objects.filter(*filter_validity()).order_by("code")
+    dataset = item_resource.export(query_set)
+    datasets = {
+        XLS: dataset.xls,
+        CSV: dataset.csv,
+        JSON: dataset.json,
+        XLSX: dataset.xlsx,
+    }
+    response = HttpResponse(datasets[data_type], content_type=CONTENT_TYPES[data_type])
+    response['Content-Disposition'] = f'attachment; filename="items.{data_type}"'
+    return response
+
+
+@api_view(["POST"])
+def import_items(request):
+    serializer = serializers.DeletableUploadSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    file = serializer.validated_data.get("file")
+
+    item_resource = ItemResource(request.user.id_for_audit)
+    # item_resource = ItemResourceImport(request.user.id_for_audit)
+    dataset = Dataset()
+
+
+    if CSV in file.content_type:
+        print("*** CSV ***")
+        # the CSV file must be read differently, otherwise it crashes
+        dataset.load(file.read().decode(), format="csv")
+    else:
+        print("*** NOT CSV ***")
+        dataset.load(file.read())
+
+    result = item_resource.import_data(dataset, dry_run=True)  # Test the data import
+
+    if not result.has_errors():
+        print("*** import - no error on dry run ***")
+        print(result)
+        item_resource.import_data(dataset, dry_run=False)  # Actually import now
+    else:
+        # The whole error structure is a bit complicated, this part should be improved before it is actually used
+        print("\n\n*** import - at least 1 error on dry run ***\n")
+        print(result.totals)
+        for index, row_error in result.row_errors():
+            for error in row_error:
+                print(f"\terror: {error.error}")
+                print(f"\trow: {error.row}")
+                print(f"\ttraceback: {error.traceback}")
+
+        print("**** errors over ***")
+
+    errors = []
+    for invalid_row in result.invalid_rows:
+        errors.append(f"row ({invalid_row.number}) - {str(invalid_row.error)}")
+
+    response_data = {
+        "total_rows": result.total_rows,
+        "totals": result.totals,
+        "base_errors": result.base_errors,
+        "errors": errors
+    }
+
+    return JsonResponse(data=response_data)
