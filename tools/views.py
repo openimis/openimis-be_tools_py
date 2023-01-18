@@ -598,37 +598,62 @@ def _process_upload(request, process_method):
     return JsonResponse({"success": len(errors) == 0, "errors": errors})
 
 
-# Each of the following functions should also have decorators for making sure the user is logged in.
-
-# The 4 export_items_xxx could be all merged into a single function, which receives
-# a parameter to determine in which format the items should be exported
+# TODO : refactor the 4 export_items_xxx functions (could be all merged into a single function, which receives
+# a parameter to determine in which format the items should be exported)
 @api_view(["GET"])
+@permission_classes(
+    [
+        checkUserWithRights(
+            ToolsConfig.registers_items_perms,
+        )
+    ]
+)
 def export_items_csv(request):
     return export_items(request.user.id_for_audit, CSV)
 
 
 @api_view(["GET"])
+@permission_classes(
+    [
+        checkUserWithRights(
+            ToolsConfig.registers_items_perms,
+        )
+    ]
+)
 def export_items_json(request):
     return export_items(request.user.id_for_audit, JSON)
 
 
 @api_view(["GET"])
+@permission_classes(
+    [
+        checkUserWithRights(
+            ToolsConfig.registers_items_perms,
+        )
+    ]
+)
 def export_items_xls(request):
     return export_items(request.user.id_for_audit, XLS)
 
 
 @api_view(["GET"])
+@permission_classes(
+    [
+        checkUserWithRights(
+            ToolsConfig.registers_items_perms,
+        )
+    ]
+)
 def export_items_xlsx(request):
     return export_items(request.user.id_for_audit, XLSX)
 
 
-# List of supported import files so far
+# List of tested import formats so far
 XLS = "xls"
 XLSX = "xlsx"
 CSV = "csv"
 JSON = "json"
 
-# FE : delete column "validity to" as we display only null ones (most recent versions)
 # other types: https://stackoverflow.com/a/50860387
 CONTENT_TYPES = {
     XLS: "application/vnd.ms-excel",
@@ -639,6 +664,7 @@ CONTENT_TYPES = {
 
 
 def export_items(user_id, data_type):
+    logger.info("User (audit id %s) requested export of medical items in %s", user_id, data_type)
     item_resource = ItemResource(user_id)
     query_set = Item.objects.filter(*filter_validity()).order_by("code")
     dataset = item_resource.export(query_set)
@@ -654,52 +680,55 @@ def export_items(user_id, data_type):
 
 
 @api_view(["POST"])
+@permission_classes(
+    [
+        checkUserWithRights(
+            ToolsConfig.registers_items_perms,
+        )
+    ]
+)
 def import_items(request):
-    serializer = serializers.DeletableUploadSerializer(data=request.data)
+    serializer = serializers.FileSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
     file = serializer.validated_data.get("file")
+    user_id = request.user.id_for_audit
+    logger.info("User (audit id %s) requested import of medical items", user_id)
 
-    item_resource = ItemResource(request.user.id_for_audit)
-    # item_resource = ItemResourceImport(request.user.id_for_audit)
+    item_resource = ItemResource(user_id)
     dataset = Dataset()
 
-
-    if CSV in file.content_type:
-        print("*** CSV ***")
-        # the CSV file must be read differently, otherwise it crashes
-        dataset.load(file.read().decode(), format="csv")
+    if CONTENT_TYPES[CSV] == file.content_type:
+        dataset.load(file.read().decode(), format="csv")  # the CSV file must be read differently, otherwise it crashes
     else:
-        print("*** NOT CSV ***")
         dataset.load(file.read())
 
     result = item_resource.import_data(dataset, dry_run=True)  # Test the data import
 
-    if not result.has_errors():
-        print("*** import - no error on dry run ***")
-        print(result)
-        item_resource.import_data(dataset, dry_run=False)  # Actually import now
-    else:
-        # The whole error structure is a bit complicated, this part should be improved before it is actually used
-        print("\n\n*** import - at least 1 error on dry run ***\n")
-        print(result.totals)
-        for index, row_error in result.row_errors():
-            for error in row_error:
-                print(f"\terror: {error.error}")
-                print(f"\trow: {error.row}")
-                print(f"\ttraceback: {error.traceback}")
-
-        print("**** errors over ***")
-
-    errors = []
-    for invalid_row in result.invalid_rows:
-        errors.append(f"row ({invalid_row.number}) - {str(invalid_row.error)}")
-
     response_data = {
-        "total_rows": result.total_rows,
-        "totals": result.totals,
-        "base_errors": result.base_errors,
-        "errors": errors
+        "total_rows_sent": result.total_rows,
     }
+    logger.info("Import results: total rows received=%s - detail=%s", result.total_rows, result.totals)
 
+    if not result.has_errors() and not result.has_validation_errors():
+        item_resource.import_data(dataset, dry_run=False)  # Actually import now
+        response_data["result"] = result.totals
+    else:
+        response_data["result"] = f"Import failed: {result.totals['error'] + result.totals['invalid']} error(s)"
+        if result.has_validation_errors():
+            validation_errors = []
+            for invalid_row in result.invalid_rows:
+                logger.error("Invalid row n°%s - %s", invalid_row.number, invalid_row.error.message)
+                validation_errors.append(f"row ({invalid_row.number}) - {invalid_row.error.message}")
+            response_data["validation_errors"] = validation_errors
+        if result.has_errors():
+            errors = []
+            for index, row_error in result.row_errors():
+                logger.error("Error row n°%s", index)
+                for error in row_error:
+                    logger.error("Traceback: %s", error.traceback)
+                    errors.append(f"row ({index}) - {error.error}")
+            response_data["errors"] = errors
+
+    logger.info("End of import process")
     return JsonResponse(data=response_data)

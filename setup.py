@@ -28,7 +28,6 @@ setup(
         "pyzipper",
         "defusedxml",
         "django-import-export",
-        "tablib",
     ],
     classifiers=[
         "Environment :: Web Environment",
