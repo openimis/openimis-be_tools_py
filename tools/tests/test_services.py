@@ -9,17 +9,20 @@ from xml.etree import ElementTree
 from datetime import date, datetime, time, timedelta
 
 from core.models import Officer
+from core.test_helpers import create_test_officer
+
 from core.utils import filter_validity
+from core.services import create_or_update_officer_villages
 from location.models import Location
 from policy.services import insert_renewals
 from claim.models import Claim
+from claim.services import create_feedback_prompt
 from claim.test_helpers import (
     create_test_claim,
     create_test_claimservice,
     create_test_claimitem,
     delete_claim_with_itemsvc_dedrem_and_history,
 )
-from claim.gql_mutations import create_feedback_prompt
 
 class UploadClaimsTestCase(TestCase):
     def test_upload_claims_unknown_hf(self):
@@ -85,7 +88,8 @@ class register(TestCase):
         
         cls.claim = create_test_claim(custom_props={'status': Claim.STATUS_CHECKED, 'feedback_status': Claim.FEEDBACK_SELECTED})
         
-        cls.test_officer = Officer.objects.filter(officer_villages__location = cls.claim.insuree.family.location).first()
+        cls.test_officer = create_test_officer(villages = [cls.claim.insuree.family.location])
+        
         insert_renewals(
             date_from= date.today() + timedelta(days=-3650), 
             date_to=date.today()+ timedelta(days=7300), 
