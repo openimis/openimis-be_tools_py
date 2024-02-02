@@ -101,7 +101,7 @@ class register(TestCase):
         mock_user.has_perm = mock.MagicMock(return_value=True)
         mock_user.is_imis_admin = mock.MagicMock(return_value=False)
         
-        create_feedback_prompt(self.claim.uuid, user=DummyUser())
+        create_feedback_prompt(self.claim, user=DummyUser())
         zip = create_officer_feedbacks_export(mock_user, self.test_officer)
         self.assertNotEqual(zip, None)
         
