@@ -4,6 +4,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 from core.models import Officer
+from core.security import checkUserWithRights
 from core.utils import filter_validity
 from django.core.exceptions import PermissionDenied
 from django.db.models.query_utils import Q
