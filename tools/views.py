@@ -4,6 +4,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 from core.models import Officer
+from core.security import checkUserWithRights
 from core.utils import filter_validity
 from django.core.exceptions import PermissionDenied
 from django.db.models.query_utils import Q
@@ -19,7 +20,7 @@ from location.models import HealthFacility, Location
 from medical.models import Diagnosis, Item, Service
 from location.apps import DEFAULT_CFG as LOCATION_DEFAULT_CFG
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
-from rest_framework.permissions import IsAuthenticated
+
 from rest_framework.response import Response
 from . import serializers, services, utils
 from .apps import ToolsConfig
@@ -29,14 +30,6 @@ from .services import return_upload_result_json
 logger = logging.getLogger(__name__)
 
 
-def checkUserWithRights(rights):
-    class UserWithRights(IsAuthenticated):
-        def has_permission(self, request, view):
-            return super().has_permission(request, view) and request.user.has_perms(
-                rights
-            )
-
-    return UserWithRights
 
 
 @api_view(["GET"])

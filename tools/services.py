@@ -122,7 +122,8 @@ def load_diagnoses_xml(xml):
     return result, errors
 
 
-VALID_PATIENT_CATEGORY_INPUTS = [0, 1, "0", "1"] # added string literals for CSVs (again, CSVs must have a special way to be handled...)
+# added string literals for CSVs (again, CSVs must have a special way to be handled...)
+VALID_PATIENT_CATEGORY_INPUTS = [0, 1, "0", "1"]
 
 
 def parse_xml_items(xml):
@@ -983,7 +984,7 @@ def create_master_data_export(user):
 
         zip_file = tempfile.NamedTemporaryFile(
             "wb",
-            prefix=f"master_data_{datetime.now().isoformat()}",
+            prefix=f"master_data_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
             suffix=".zip",
             delete=False,
         )
@@ -1013,17 +1014,17 @@ def create_officer_feedbacks_export(user, officer):
     AND C.FeedbackStatus = 4"
 
     """
-    
+
     prompts = FeedbackPrompt.objects.filter(*filter_validity())\
-        .filter(officer_id = officer.id, claim__feedback_status = Claim.FEEDBACK_SELECTED )\
+        .filter(officer_id=officer.id, claim__feedback_status=Claim.FEEDBACK_SELECTED)\
         .select_related('claim',
-        'claim__insuree',
-        'claim__health_facility')
+                        'claim__insuree',
+                        'claim__health_facility')
     results = []
     format_date = '%d-%m-%Y'
     for p in prompts:
         results.append({
-            "ClaimID" : p.claim_id,
+            "ClaimID": p.claim_id,
             "OfficerID": officer.id,
             "OfficerCode": officer.code,
             "CHFID": p.claim.insuree.chf_id,
@@ -1033,8 +1034,8 @@ def create_officer_feedbacks_export(user, officer):
             "HFName": p.claim.health_facility.name,
             "ClaimCode": p.claim.code,
             "DateFrom": p.claim.date_from.strftime(format_date),
-            "DateTo":  p.claim.date_to.strftime(format_date),
-            "Phone":  officer.phone,
+            "DateTo": p.claim.date_to.strftime(format_date),
+            "Phone": officer.phone,
             "FeedbackPromptDate": p.feedback_prompt_date.strftime(format_date)
         })
 
@@ -1248,11 +1249,12 @@ def create_phone_extract(user, location_id, with_insuree=False):
 def upload_claim(user, xml):
     logger.info(f"Uploading claim with user {user.id}")
 
-    if settings.ROW_SECURITY :
+    if settings.ROW_SECURITY:
         logger.info("Check that user can upload claims in claims' health facilities")
         hf_code = xml.find("Claim").find("Details").find("HFCode").text
-        hfs = LocationManager().build_user_location_filter_query(user._u, queryset = HealthFacility.filter_queryset().filter(code=hf_code), loc_types = ['D'])
-        if len(hfs)<1:
+        hfs = LocationManager().build_user_location_filter_query(
+            user._u, queryset=HealthFacility.filter_queryset().filter(code=hf_code), loc_types=['D'])
+        if len(hfs) < 1:
             raise InvalidXMLError(
                 f"User cannot upload claims for health facility {hf_code}"
             )
@@ -1647,11 +1649,14 @@ def validate_imported_item_row(row):
     elif len(row["name"]) < 1 or len(row["name"]) > 100:
         raise ValidationError(f"Item '{row['code']}': name is invalid. Must be between 1 and 100 characters")
     elif row["type"] not in Item.TYPE_VALUES:
-        raise ValidationError(f"Item '{row['code']}': type is invalid. Must be one of the following: {Item.TYPE_VALUES}")
+        raise ValidationError(
+            f"Item '{row['code']}': type is invalid. Must be one of the following: {Item.TYPE_VALUES}")
     elif row["care_type"] not in ItemOrService.CARE_TYPE_VALUES:
-        raise ValidationError(f"Item '{row['code']}': care type is invalid. Must be one of the following: {ItemOrService.CARE_TYPE_VALUES}")
+        raise ValidationError(
+            f"Item '{row['code']}': care type is invalid. Must be one of the following: {ItemOrService.CARE_TYPE_VALUES}")
     elif any([cat not in VALID_PATIENT_CATEGORY_INPUTS for cat in categories]):
-        raise ValidationError(f"Item '{row['code']}': patient categories are invalid. Must be one of the following: [0, 1]")
+        raise ValidationError(
+            f"Item '{row['code']}': patient categories are invalid. Must be one of the following: [0, 1]")
     elif "package" in row and (row["package"] is not None) and len(row["package"]) > 255:
         raise ValidationError(f"Item '{row['code']}': package is invalid. Must be maximum 255 characters")
     return
@@ -1665,18 +1670,23 @@ def validate_imported_service_row(row):
     elif len(row["name"]) < 1 or len(row["name"]) > 100:
         raise ValidationError(f"Service '{row['code']}': name is invalid. Must be between 1 and 100 characters")
     elif row["type"] not in Service.TYPE_VALUES:
-        raise ValidationError(f"Service '{row['code']}': type is invalid. Must be one of the following: {Service.TYPE_VALUES}")
+        raise ValidationError(
+            f"Service '{row['code']}': type is invalid. Must be one of the following: {Service.TYPE_VALUES}")
     elif row["level"] not in Service.LEVEL_VALUES:
-        raise ValidationError(f"Service '{row['code']}': level is invalid. Must be one of the following: {Service.LEVEL_VALUES}")
+        raise ValidationError(
+            f"Service '{row['code']}': level is invalid. Must be one of the following: {Service.LEVEL_VALUES}")
     elif row["care_type"] not in ItemOrService.CARE_TYPE_VALUES:
-        raise ValidationError(f"Service '{row['code']}': care type is invalid. Must be one of the following: {ItemOrService.CARE_TYPE_VALUES}")
+        raise ValidationError(
+            f"Service '{row['code']}': care type is invalid. Must be one of the following: {ItemOrService.CARE_TYPE_VALUES}")
     elif any([cat not in VALID_PATIENT_CATEGORY_INPUTS for cat in categories]):
-        raise ValidationError(f"Service '{row['code']}': patient categories are invalid. Must be one of the following: [0, 1]")
+        raise ValidationError(
+            f"Service '{row['code']}': patient categories are invalid. Must be one of the following: [0, 1]")
     elif "category" in row and \
             row["category"] is not None and \
             len(row["category"]) and \
             row["category"] not in Service.CATEGORY_VALUES:
-        raise ValidationError(f"Service '{row['code']}': category is invalid. Must be one of the following: {Service.CATEGORY_VALUES}")
+        raise ValidationError(
+            f"Service '{row['code']}': category is invalid. Must be one of the following: {Service.CATEGORY_VALUES}")
     return
 
 
