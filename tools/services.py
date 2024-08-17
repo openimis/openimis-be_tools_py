@@ -25,7 +25,7 @@ from tools.constants import (
     STRATEGY_UPDATE,
 )
 from tools.apps import ToolsConfig
-from datetime import datetime
+import datetime
 
 from insuree.models import Family, Insuree, InsureePolicy
 from medical.models import Diagnosis, Item, Service, ItemOrService
@@ -608,7 +608,6 @@ def upload_simple_data(user, context):
                 if not context.dry_run:
                     existing.save_history()
                     [setattr(existing, key, entry[key]) for key in entry]
-                    from core import datetime
                     existing.validity_from = datetime.datetime.now()
                     existing.save()
                 result.updated += 1
@@ -623,7 +622,6 @@ def upload_simple_data(user, context):
         result.deleted = len(qs)
         logger.info("Deleted %s %s", result.deleted, context.log_string_pl)
         if not context.dry_run:
-            from core import datetime
             qs.update(validity_to=datetime.datetime.now(), audit_user_id=user.id_for_audit)
 
     logger.debug("Finished processing of %s: %s", context.log_string_pl, result)
@@ -984,7 +982,7 @@ def create_master_data_export(user):
 
         zip_file = tempfile.NamedTemporaryFile(
             "wb",
-            prefix=f"master_data_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+            prefix=f"master_data_{datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')}",
             suffix=".zip",
             delete=False,
         )
@@ -1047,7 +1045,7 @@ def create_officer_feedbacks_export(user, officer):
 
         zip_file = tempfile.NamedTemporaryFile(
             "wb",
-            prefix=f"feedbacks_{officer.code}_{datetime.now().isoformat()}",
+            prefix=f"feedbacks_{officer.code}_{datetime.datetime.now().isoformat()}",
             suffix=".zip",
             delete=False,
         )
@@ -1101,7 +1099,7 @@ def create_officer_renewals_export(user, officer):
 
         zip_file = tempfile.NamedTemporaryFile(
             "wb",
-            prefix=f"renewals_{officer.code}_{datetime.now().isoformat()}",
+            prefix=f"renewals_{officer.code}_{datetime.datetime.now().isoformat()}",
             suffix=".zip",
             delete=False,
         )
@@ -1584,7 +1582,7 @@ def upload_renewals(archive, user):
             # RenewalId, Officer, CHFID, ReceiptNo, ProductCode, Amount, Date, Discontinue, PayerId
             db_policy.status = Policy.STATUS_ACTIVE
             db_policy.save()
-            update_insuree_policies(db_policy, user.id_for_audit)
+            update_insuree_policies(db_policy, user)
             renewed_policies.append(policy)
 
 
