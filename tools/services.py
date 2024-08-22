@@ -1031,10 +1031,10 @@ def create_officer_feedbacks_export(user, officer):
             "HFCode": p.claim.health_facility.code,
             "HFName": p.claim.health_facility.name,
             "ClaimCode": p.claim.code,
-            "DateFrom": p.claim.date_from.strftime(format_date),
-            "DateTo": p.claim.date_to.strftime(format_date),
+            "DateFrom": p.claim.date_from.strftime(format_date) if p.claim.date_from else None,
+            "DateTo": p.claim.date_to.strftime(format_date) if p.claim.date_to else None,
             "Phone": officer.phone,
-            "FeedbackPromptDate": p.feedback_prompt_date.strftime(format_date)
+            "FeedbackPromptDate": p.feedback_prompt_date.strftime(format_date) if p.feedback_prompt_date else None
         })
 
     with tempfile.TemporaryDirectory() as tmp_dir_name:
