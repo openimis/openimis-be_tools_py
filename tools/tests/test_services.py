@@ -101,6 +101,7 @@ class register(TestCase):
     def test_generating_feedback(self):
         class DummyUser:
             id_for_audit = -1
+            id = 1
         mock_user = mock.Mock(is_anonymous=False)
         mock_user.has_perm = mock.MagicMock(return_value=True)
         mock_user.is_imis_admin = mock.MagicMock(return_value=False)
