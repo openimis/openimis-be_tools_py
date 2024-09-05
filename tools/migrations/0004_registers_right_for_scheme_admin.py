@@ -3,7 +3,7 @@ from core.utils import insert_role_right_for_system
 
 
 def add_rights(apps, schema_editor):
-    insert_role_right_for_system(32, 131000)
+    insert_role_right_for_system(32, 131000, apps)
 
 
 class Migration(migrations.Migration):

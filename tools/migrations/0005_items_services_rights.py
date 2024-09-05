@@ -4,10 +4,10 @@ from django.db import migrations
 
 
 def add_rights(apps, schema_editor):
-    insert_role_right_for_system(64, 131007)  # items
-    insert_role_right_for_system(64, 131008)  # items
-    insert_role_right_for_system(64, 131009)  # services
-    insert_role_right_for_system(64, 131010)  # services
+    insert_role_right_for_system(64, 131007, apps)  # items
+    insert_role_right_for_system(64, 131008, apps)  # items
+    insert_role_right_for_system(64, 131009, apps)  # services
+    insert_role_right_for_system(64, 131010, apps)  # services
 
 
 class Migration(migrations.Migration):
