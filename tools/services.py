@@ -29,7 +29,7 @@ import datetime
 
 from insuree.models import Family, Insuree, InsureePolicy
 from medical.models import Diagnosis, Item, Service, ItemOrService
-from location.models import Location, HealthFacility, LocationManager
+from location.models import Location, HealthFacility, LocationManager, UserDistrict
 from medical_pricelist.models import ServicesPricelist, ItemsPricelist
 from claim.models import ClaimAdmin, Claim, Feedback, FeedbackPrompt
 from policy.models import Policy
