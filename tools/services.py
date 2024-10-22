@@ -1641,7 +1641,12 @@ def upload_feedbacks(archive, user):
 
 def validate_imported_item_row(row):
     # TODO : refactor this function and the code used in validating XML uploads
-    categories = [row["adult_cat"], row["minor_cat"], row["male_cat"], row["female_cat"]]
+    categories = [
+        row.get("adult_cat", 1),
+        row.get("minor_cat", 1),
+        row.get("male_cat", 1),
+        row.get("female_cat", 1)
+    ]
     if len(row["code"]) < 1 or len(row["code"]) > 6:
         raise ValidationError(f"Item '{row['code']}': code is invalid. Must be between 1 and 6 characters")
     elif len(row["name"]) < 1 or len(row["name"]) > 100:

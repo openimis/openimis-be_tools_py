@@ -578,14 +578,14 @@ CONTENT_TYPES = {
 def export_items(request):
     export_format = request.GET.get("file_format", "unknown")
     if export_format in SUPPORTED_FORMATS:
-        return process_export_items(request.user.id_for_audit, export_format)
+        return process_export_items(request.user, export_format)
     else:
         return JsonResponse({"error": "Unknown export format."}, status=400)
 
 
-def process_export_items(user_id, data_type):
-    logger.info("User (audit id %s) requested export of medical items in %s", user_id, data_type)
-    item_resource = ItemResource(user_id)
+def process_export_items(user, data_type):
+    logger.info("User (audit id %s) requested export of medical items in %s", request.user.id_for_audit, data_type)
+    item_resource = ItemResource(user=user)
     query_set = Item.objects.filter(*filter_validity()).order_by("code")
     dataset = item_resource.export(query_set)
     datasets = {
@@ -612,10 +612,9 @@ def import_items(request):
     serializer.is_valid(raise_exception=True)
 
     file = serializer.validated_data.get("file")
-    user_id = request.user.id_for_audit
-    logger.info("User (audit id %s) requested import of medical items", user_id)
+    logger.info("User (audit id %s) requested import of medical items",request.user.id_for_audit)
 
-    item_resource = ItemResource(user_id)
+    item_resource = ItemResource(user=request.user)
     dataset = Dataset()
 
     if CONTENT_TYPES[CSV] == file.content_type:
@@ -637,14 +636,14 @@ def import_items(request):
 def export_services(request):
     export_format = request.GET.get("file_format", "unknown")
     if export_format in SUPPORTED_FORMATS:
-        return process_export_services(request.user.id_for_audit, export_format)
+        return process_export_services(request.user, export_format)
     else:
         return JsonResponse({"error": "Unknown export format."}, status=400)
 
 
-def process_export_services(user_id, data_type):
-    logger.info("User (audit id %s) requested export of medical services in %s", user_id, data_type)
-    service_resource = ServiceResource(user_id)
+def process_export_services(user, data_type):
+    logger.info("User (audit id %s) requested export of medical services in %s", request.user.id_for_audit, data_type)
+    service_resource = ServiceResource(user)
     query_set = Service.objects.filter(*filter_validity()).order_by("code")
     dataset = service_resource.export(query_set)
     datasets = {
@@ -671,10 +670,9 @@ def import_services(request):
     serializer.is_valid(raise_exception=True)
 
     file = serializer.validated_data.get("file")
-    user_id = request.user.id_for_audit
-    logger.info("User (audit id %s) requested import of medical services", user_id)
+    logger.info("User (audit id %s) requested import of medical services", request.user.id_for_audit)
 
-    service_resource = ServiceResource(user_id)
+    service_resource = ServiceResource(equest.user)
     dataset = Dataset()
 
     if CONTENT_TYPES[CSV] == file.content_type:
