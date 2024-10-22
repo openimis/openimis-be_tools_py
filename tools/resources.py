@@ -107,7 +107,7 @@ class ItemResource(ItemServiceResource):
         # These are the fields that are going to get exported/
         fields = ('code', 'name', 'type', 'package', 'price', 'quantity',
                   'care_type', 'frequency', 'patient_category', 
-                  'male_cat', 'female_cat', 'adult_cat', 'minor_ca  t')
+                  'male_cat', 'female_cat', 'adult_cat', 'minor_cat')
 
         # You can customize the order for exports, but this order is also used during upload
         # (to know which fields will be there, instead of reading the headers)

@@ -584,7 +584,7 @@ def export_items(request):
 
 
 def process_export_items(user, data_type):
-    logger.info("User (audit id %s) requested export of medical items in %s", request.user.id_for_audit, data_type)
+    logger.info("User (audit id %s) requested export of medical items in %s", user.id_for_audit, data_type)
     item_resource = ItemResource(user=user)
     query_set = Item.objects.filter(*filter_validity()).order_by("code")
     dataset = item_resource.export(query_set)
@@ -642,7 +642,7 @@ def export_services(request):
 
 
 def process_export_services(user, data_type):
-    logger.info("User (audit id %s) requested export of medical services in %s", request.user.id_for_audit, data_type)
+    logger.info("User (audit id %s) requested export of medical services in %s", user.id_for_audit, data_type)
     service_resource = ServiceResource(user)
     query_set = Service.objects.filter(*filter_validity()).order_by("code")
     dataset = service_resource.export(query_set)
@@ -672,7 +672,7 @@ def import_services(request):
     file = serializer.validated_data.get("file")
     logger.info("User (audit id %s) requested import of medical services", request.user.id_for_audit)
 
-    service_resource = ServiceResource(equest.user)
+    service_resource = ServiceResource(request.user)
     dataset = Dataset()
 
     if CONTENT_TYPES[CSV] == file.content_type:
